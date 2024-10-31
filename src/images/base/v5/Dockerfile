@@ -4,7 +4,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip && \
     python3 -m venv /venv && \
     . /venv/bin/activate && \
-    pip install --no-cache-dir \
+    pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple \
     torch \
     torchsde \
     torchvision \
@@ -37,12 +37,12 @@ RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
 RUN --mount=type=bind,source=/base/v5/built-in,target=/docker \
     cp -R /docker/custom_nodes/* /custom_nodes/
 
-FROM python:3.10.9-slim AS models
-
-RUN apt update && apt install -y aria2
-
-COPY --from=registry.cn-hangzhou.aliyuncs.com/ohyee/fc-demo:fc-comfyui-sd1.5-v1 "/built-in/models/checkpoints/sd-v1-5-inpainting.ckpt" "/models/checkpoints/sd-v1-5-inpainting.ckpt"
-
+#FROM python:3.10.9-slim AS models
+#
+#RUN apt update && apt install -y aria2
+#
+#COPY --from=registry.cn-hangzhou.aliyuncs.com/ohyee/fc-demo:fc-comfyui-sd1.5-v1 "/built-in/models/checkpoints/sd-v1-5-inpainting.ckpt" "/models/checkpoints/sd-v1-5-inpainting.ckpt"
+#
 
 
 FROM golang:1.21 AS agent
@@ -61,6 +61,8 @@ ENV BUILTIN="/built-in"
 ENV COMFYUI="/comfyui"
 ENV NAS_DIR="/mnt/auto/comfyui"
 ENV VIRTUAL_NAS="/virtual_nas"
+
+RUN sed -i 's|http://deb.debian.org|https://mirrors.aliyun.com|g' /etc/apt/sources.list
 
 RUN --mount=type=cache,target=/var/cache/apt \
     apt update && \
@@ -87,8 +89,8 @@ WORKDIR ${COMFYUI}
 # 确保依赖最新
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip && \
-    pip install -r ${COMFYUI}/requirements.txt --no-cache-dir && \ 
-    find ${COMFYUI} -type f -name requirements.txt | xargs -I {} pip install -r {}
+    pip install -r ${COMFYUI}/requirements.txt --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple && \
+    find ${COMFYUI} -type f -name requirements.txt | xargs -I {} pip install -r {} -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 移动自带文件
 RUN mkdir -p ${BUILTIN}/custom_nodes && \
@@ -114,29 +116,29 @@ RUN --mount=type=bind,from=agent,source=/agent,target=/mnt/agent \
 
 
 
-# sd1.5 内置 sd1.5 模型及推荐自定义节点的镜像
-FROM base AS sd1.5
-
-# 内置模型
-RUN --mount=type=bind,from=models,source=/models,target=/models \
-    mkdir -p ${BUILTIN}/models/checkpoints && \
-    rsync -av /models/ ${BUILTIN}/models/
-
-# 内置自定义节点
-RUN --mount=type=bind,from=custom_nodes,source=/custom_nodes,target=/custom_nodes \
-    --mount=type=bind,source=./,target=/docker \
-    mkdir -p ${BUILTIN}/custom_nodes && \
-    rsync -av /custom_nodes/ ${BUILTIN}/custom_nodes
-
-# 更新依赖至最新
-RUN --mount=type=cache,target=/root/.cache/pip \
-    find ${BUILTIN}/custom_nodes -type f -name requirements.txt | xargs -I {} pip install -r {}
-
-
-# 处理文件关系
-ARG IMAGE_TAG="${IMAGE_TAG}"
-ENV IMAGE_TAG=${IMAGE_TAG}
-
-RUN --mount=type=bind,from=agent,source=/agent,target=/mnt/agent \
-    --mount=type=bind,source=/base/v5,target=/docker \
-    bash /docker/init.bash
+## sd1.5 内置 sd1.5 模型及推荐自定义节点的镜像
+#FROM base AS sd1.5
+#
+## 内置模型
+#RUN --mount=type=bind,from=models,source=/models,target=/models \
+#    mkdir -p ${BUILTIN}/models/checkpoints && \
+#    rsync -av /models/ ${BUILTIN}/models/
+#
+## 内置自定义节点
+#RUN --mount=type=bind,from=custom_nodes,source=/custom_nodes,target=/custom_nodes \
+#    --mount=type=bind,source=./,target=/docker \
+#    mkdir -p ${BUILTIN}/custom_nodes && \
+#    rsync -av /custom_nodes/ ${BUILTIN}/custom_nodes
+#
+## 更新依赖至最新
+#RUN --mount=type=cache,target=/root/.cache/pip \
+#    find ${BUILTIN}/custom_nodes -type f -name requirements.txt | xargs -I {} pip install -r {}
+#
+#
+## 处理文件关系
+#ARG IMAGE_TAG="${IMAGE_TAG}"
+#ENV IMAGE_TAG=${IMAGE_TAG}
+#
+#RUN --mount=type=bind,from=agent,source=/agent,target=/mnt/agent \
+#    --mount=type=bind,source=/base/v5,target=/docker \
+#    bash /docker/init.bash
