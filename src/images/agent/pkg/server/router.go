@@ -36,6 +36,16 @@ func Router(w http.ResponseWriter, r *http.Request) {
 		SetCORS(w, r)
 		Progress(w, r)
 
+	case "/initialize":
+		// 获取进度
+		SetCORS(w, r)
+		Initialize(w, r)
+
+	case "/invoke":
+		// 获取进度
+		SetCORS(w, r)
+		Invoke(w, r)
+
 	default:
 		// 默认转发给 comfyui
 		Proxy(w, r)
