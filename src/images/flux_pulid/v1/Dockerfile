@@ -98,8 +98,15 @@ RUN find "${BUILTIN}/root" ! -type d -printf "%P\n" | xargs -I {} bash -c "mkdir
 RUN --mount=type=cache,target=/root/.cache/pip \
     find ${BUILTIN}/custom_nodes -type f -name requirements.txt | xargs -I {} pip install -r {}
 
+RUN aria2c -x 16 --dir "/venv/lib/python3.10/site-packages/facexlib/weights" --out "detection_Resnet50_Final.pth" "https://github.com/xinntao/facexlib/releases/download/v0.1.0/detection_Resnet50_Final.pth"
+# 81M
+RUN aria2c -x 16 --dir "/venv/lib/python3.10/site-packages/facexlib/weights " --out "parsing_parsenet.pth" "https://github.com/xinntao/facexlib/releases/download/v0.2.2/parsing_parsenet.pth"
+# 50M
+RUN aria2c -x 16 --dir "/venv/lib/python3.10/site-packages/facexlib/weights" --out "parsing_bisenet.pth" "https://github.com/xinntao/facexlib/releases/download/v0.2.0/parsing_bisenet.pth"
+
 ARG IMAGE_TAG=${IMAGE_TAG}
 ENV IMAGE_TAG=${IMAGE_TAG}
-RUN --mount=type=bind,source=/base/v5,target=/docker \
+RUN --mount=type=bind,source=/agent,target=/mnt/agent \
+    --mount=type=bind,source=/base/v5,target=/docker \
     mkdir -p ${COMFYUI}/models/configs && \
     bash /docker/init.bash
